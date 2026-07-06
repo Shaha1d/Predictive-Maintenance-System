@@ -1,8 +1,12 @@
 import sys
-class Model:
-    pass
+import types
 
-sys.modules['_main_'].Model = Model
+if not hasattr(sys.modules['_main_'], 'Model'):
+    mock_module = types.ModuleType('_main_')
+    class Model:
+        pass
+    mock_module.Model = Model
+    sys.modules['_main_'].Model = Model
 import streamlit as st
 import pandas as pd
 import numpy as np
