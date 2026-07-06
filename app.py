@@ -1,63 +1,59 @@
-import sys
-import types
-
-if not hasattr(sys.modules['_main_'], 'Model'):
-    mock_module = types.ModuleType('_main_')
-    class Model:
-        pass
-    mock_module.Model = Model
-    sys.modules['_main_'].Model = Model
 import streamlit as st
 import pandas as pd
 import numpy as np
-import joblib
+import pickle
 import os
 
-# Set page configuration
-st.set_page_config(page_title="Predictive Maintenance System", layout="centered")
+class CustomUnpickler(pickle.Unpickler):
+    def find_class(self, module, name):
+        if name == 'Model':
+            class Model: pass
+            return Model
+        return super().find_class(module, name)
 
-st.title("🏭 Predictive Maintenance Dashboard")
+st.set_page_config(page_title="Predictive Maintenance Dashboard", layout="wide")
+
+st.title("Predictive Maintenance Dashboard")
 st.write("This dashboard predicts the probability of machine failure based on real-time sensor data.")
 
-# Sidebar for user inputs (Sensors)
-st.sidebar.header("⚙️ Machine Sensor Inputs")
+model_path = "model.pkl"
 
-air_temp = st.sidebar.slider("Air Temperature (K)", 295.0, 310.0, 298.0)
-process_temp = st.sidebar.slider("Process Temperature (K)", 300.0, 315.0, 308.0)
-rot_speed = st.sidebar.slider("Rotational Speed (rpm)", 1000, 3000, 1500)
-torque = st.sidebar.slider("Torque (Nm)", 10.0, 80.0, 40.0)
-tool_wear = st.sidebar.slider("Tool Wear (min)", 0, 250, 50)
-
-# Create input dataframe
-input_data = pd.DataFrame([{
-    'Air_temperature': air_temp,
-    'Process_temperature': process_temp,
-    'Rotational_speed': rot_speed,
-    'Torque': torque,
-    'Tool_wear': tool_wear
-}])
-
-st.subheader("📊 Current Sensor Status")
-st.dataframe(input_data)
-
-# Check if model exists, if not show warning (since it trains locally)
-model_path = "src/model.pkl"
-if os.path.exists(model_path):
-    # Load trained model
-    import pickle
-with open(model_path, 'rb') as f:
-    model = pickle.load(f)
-    
-    # Predict
-    prediction = model.predict(input_data)[0]
-    prediction_proba = model.predict_proba(input_data)[0][1]
-    
-    st.subheader("🔮 AI Prediction Results")
-    if prediction == 1:
-        st.error(f"🚨 Warning: High Risk of Machine Failure! (Probability: {prediction_proba*100:.1f}%)")
-        st.write("⚠️ Recommendation: Schedule immediate preventive maintenance.")
-    else:
-        st.success(f"✅ Machine Status: Normal (Failure Probability: {prediction_proba*100:.1f}%)")
-        st.write("👍 Current parameters are within safe operational limits.")
+if not os.path.exists(model_path):
+    st.error(f"Model file not found at {model_path}. Please check your repository.")
 else:
-    st.info("💡 Repository Setup Complete. Run 'src/train_model.py' locally to generate the model file (model.pkl) and enable active dashboard predictions.")
+    try:
+        with open(model_path, 'rb') as f:
+            model = CustomUnpickler(f).load()
+    except Exception as e:
+        st.error(f"Error loading the model: {e}")
+        model = None
+
+    if model is not None:
+        st.subheader("Current Sensor Status")
+        
+        data = {
+            'Air_temperature': [298],
+            'Process_temperature': [308],
+            'Rotational_speed': [1500],
+            'Torque': [40],
+            'Tool_wear': [50]
+        }
+        df = pd.DataFrame(data)
+        st.dataframe(df)
+        
+        st.sidebar.header("Input Sensor Features")
+        air_temp = st.sidebar.slider("Air Temperature (K)", 295, 305, 298)
+        proc_temp = st.sidebar.slider("Process Temperature (K)", 305, 315, 308)
+        rot_speed = st.sidebar.slider("Rotational Speed (rpm)", 1100, 2800, 1500)
+        torque = st.sidebar.slider("Torque (Nm)", 3, 76, 40)
+        tool_wear = st.sidebar.slider("Tool Wear (min)", 0, 250, 50)
+        
+        input_data = pd.DataFrame([[air_temp, proc_temp, rot_speed, torque, tool_wear]], 
+                                  columns=['Air_temperature', 'Process_temperature', 'Rotational_speed', 'Torque', 'Tool_wear'])
+        
+        if st.button("Predict Failure Status"):
+            prediction = model.predict(input_data)
+            if prediction[0] == 1:
+                st.error("Warning: High probability of machine failure! Maintenance required.")
+            else:
+                st.success("Machine status is normal. No failure predicted.")
