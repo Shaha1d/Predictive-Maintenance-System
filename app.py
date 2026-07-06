@@ -1,4 +1,8 @@
+import sys
+class Model:
+    pass
 
+sys.modules['_main_'].Model = Model
 import streamlit as st
 import pandas as pd
 import numpy as np
