@@ -36,7 +36,9 @@ st.dataframe(input_data)
 model_path = "src/model.pkl"
 if os.path.exists(model_path):
     # Load trained model
-    model = joblib.load(model_path)
+    import pickle
+with open(model_path, 'rb') as f:
+    model = pickle.load(f)
     
     # Predict
     prediction = model.predict(input_data)[0]
