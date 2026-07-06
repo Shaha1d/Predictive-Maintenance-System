@@ -1,3 +1,3 @@
-import execfile
-import os
-os.system("streamlit run ../app.py")
+import subprocess
+import sys
+subprocess.run([sys.executable, "-m", "streamlit", "run", "../app.py"])
