@@ -16,7 +16,7 @@ st.set_page_config(page_title="Predictive Maintenance Dashboard", layout="wide")
 st.title("Predictive Maintenance Dashboard")
 st.write("This dashboard predicts the probability of machine failure based on real-time sensor data.")
 
-model_path = "model.pkl"
+model_path = "model.pkl" if os.path.exists("model.pkl") else "src/model.pkl"
 
 if not os.path.exists(model_path):
     st.error(f"Model file not found at {model_path}. Please check your repository.")
